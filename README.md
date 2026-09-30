@@ -4,26 +4,6 @@ echo "rootPass$123!" | docker secret create root_pwd -
 echo "wpPass$123!" | docker secret create wp_pwd -
 
 Créez nginx.conf :
-server {
-listen 80;
-server_name www.my-wordpress.ch;
-
-    root /var/www/html;
-    index index.php;
-
-    location / {
-        try_files $uri $uri/ /index.php?$args;
-    }
-
-    # Redirection des fichiers PHP vers le service WordPress (PHP-FPM) sur le port 9000
-    location ~ \.php$ {
-        fastcgi_pass wordpress:9000;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-}
 
 docker-compose.yml :
 
