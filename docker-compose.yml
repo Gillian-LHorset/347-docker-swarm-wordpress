@@ -1,0 +1,79 @@
+version: "3.8"
+
+services:
+  # Service de base de données MariaDB
+  db:
+    # Utilisation de l'image officielle MariaDB v12.0.1 imposée
+    image: mariadb:11.4 #
+    networks:
+      - backend # Isolation stricte de la base de données sur le réseau backend
+    volumes:
+      - db_data:/var/lib/mysql # Volume persistant pour la sauvegarde des données MySQL/MariaDB
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/root_pwd # Mot de passe root via secret Docker
+      MYSQL_DATABASE: wordpress # Nom de la base de données créée automatiquement
+      MYSQL_USER: wp_user # Nom de l'utilisateur WordPress
+      MYSQL_PASSWORD_FILE: /run/secrets/wp_pwd # Mot de passe utilisateur via secret Docker
+    secrets:
+      - root_pwd # Importation du secret root[cite: 1, 2]
+      - wp_pwd # Importation du secret utilisateur[cite: 1, 2]
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager # Contrainte pour exécuter la base de données sur le nœud manager[cite: 1, 2]
+
+  # Service d'application WordPress (moteur PHP-FPM)
+  wordpress:
+    # Utilisation de l'image officielle WordPress fpm-alpine v6.8.2 imposée
+    image: wordpress:6.8.2-fpm-alpine #[cite: 1, 2]
+    networks:
+      - backend # Connexion au réseau backend pour communiquer avec MariaDB[cite: 1, 2]
+      - frontend # Connexion au réseau frontend pour communiquer avec le proxy Nginx[cite: 1, 2]
+    volumes:
+      - wp_data:/var/www/html # Volume partagé pour garantir la persistance des médias et du code WordPress[cite: 1, 2]
+    environment:
+      WORDPRESS_DB_HOST: db:3306 # Adresse du service de base de données
+      WORDPRESS_DB_USER: wp_user # Utilisateur configuré dans MariaDB
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/wp_pwd # Lecture du mot de passe dans le secret Docker[cite: 1, 2]
+      WORDPRESS_DB_NAME: wordpress # Nom de la base de données cible
+    secrets:
+      - wp_pwd # Accès au secret contenant le mot de passe de la DB[cite: 1, 2]
+    deploy:
+      replicas: 2 # 2 répliques pour assurer l'équilibrage de charge et la tolérance aux pannes[cite: 1, 2]
+      restart_policy:
+        condition: on-failure # Redémarrage automatique en cas de panne
+
+  # Service de Proxy Inverse Nginx (serveur web frontal)
+  nginx:
+    # Utilisation de l'image officielle Nginx v1.28.0 avec alpine v3.21 imposée
+    image: nginx:1.28.0-alpine3.21 #[cite: 1, 2]
+    ports:
+      - "80:80" # Exposition du port 80 HTTP vers l'extérieur[cite: 1, 2]
+    networks:
+      - frontend # Connexion uniquement au réseau frontend[cite: 1, 2]
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro # Montage en lecture seule de la configuration Nginx
+      - wp_data:/var/www/html # Accès au volume partagé pour servir les fichiers statiques (images, CSS, JS)[cite: 1, 2]
+    deploy:
+      replicas: 2 # Équilibrage de charge sur 2 instances Nginx[cite: 1, 2]
+      restart_policy:
+        condition: on-failure
+
+# Déclaration des 2 réseaux requis pour l'isolation (frontend / backend)
+networks:
+  frontend:
+    driver: overlay # Pilote overlay obligatoire pour la communication Inter-services Swarm[cite: 1, 2]
+  backend:
+    driver: overlay #[cite: 1, 2]
+
+# Déclaration des volumes de persistance
+volumes:
+  db_data: # Volume dédié aux fichiers de la base de données MariaDB[cite: 1, 2]
+  wp_data: # Volume partagé pour le stockage du code et des médias WordPress[cite: 1, 2]
+
+# Déclaration des secrets externes créés via la CLI
+secrets:
+  root_pwd:
+    external: true #[cite: 1, 2]
+  wp_pwd:
+    external: true #[cite: 1, 2]
