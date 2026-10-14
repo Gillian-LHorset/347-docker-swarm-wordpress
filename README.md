@@ -34,3 +34,17 @@ Depuis le manager, contrôler que les trois nœuds sont bien enregistrés avec l
 ```bash
 docker node ls
 ```
+
+## 3. Réseaux overlay
+
+Deux réseaux de type overlay sont créés sur le manager. Swarm les réplique automatiquement sur tous les nœuds afin que les conteneurs puissent communiquer entre hôtes :
+
+```bash
+# Réseau exposé : Nginx y contacte les répliques WordPress
+docker network create --driver overlay frontend
+
+# Réseau isolé : seule la liaison WordPress ↔ MariaDB y est possible
+docker network create --driver overlay backend
+```
+
+La base de données n'étant attachée qu'à `backend`, elle reste inaccessible depuis `frontend`, donc depuis le monde extérieur.
