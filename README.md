@@ -89,3 +89,9 @@ mkdir -p /root/wordpress-swarm/nginx
 ```
 
 Sans cette copie, la tâche Nginx reste bloquée en erreur `mounting` lors du déploiement.
+
+## 6. Fichier docker-compose.yml
+
+Fichier `/root/wordpress-swarm/docker-compose.yml`, chaque instruction documentée. MariaDB est placée sur le manager, WordPress et Nginx sur les workers :
+
+Voir fichier `docker-compose.yml`
