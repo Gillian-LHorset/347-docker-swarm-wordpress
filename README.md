@@ -66,3 +66,26 @@ Lister les secrets créés :
 ```bash
 docker secret ls
 ```
+
+## 5. Arborescence du projet et configuration Nginx
+
+Sur le manager, création du dossier de travail et du fichier de configuration du reverse proxy :
+
+```bash
+mkdir -p /root/wordpress-swarm/nginx
+touch /root/wordpress-swarm/nginx/default.conf
+```
+
+Contenu de `default.conf`. Nginx sert les fichiers statiques depuis le volume partagé WordPress et transmet les requêtes `.php` aux conteneurs PHP-FPM via le nom de service `wordpress`, résolu par le DNS interne de Swarm :
+
+Voir fichier `default.conf`
+
+Important : le montage `./nginx/default.conf` est un chemin local de l'hôte. Comme Nginx tourne sur les workers, ce fichier doit exister au même emplacement sur `worker1` et `worker2` :
+
+```bash
+# À exécuter sur worker1 et worker2
+mkdir -p /root/wordpress-swarm/nginx
+# Copier default.conf depuis le manager vers /root/wordpress-swarm/nginx/
+```
+
+Sans cette copie, la tâche Nginx reste bloquée en erreur `mounting` lors du déploiement.
