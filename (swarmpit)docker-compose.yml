@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  app:
+    image: swarmpit/swarmpit:latest
+    environment:
+      # Hôte de la base applicative CouchDB
+      SWARMPIT_DB: http://db:5984
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "888:80"
+      - "8888:8080"
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  db:
+    image: couchdb:2.3.0
+    volumes:
+      - db-data:/opt/couchdb/data
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  influxdb:
+    image: influxdb:1.8
+    volumes:
+      - influx-data:/var/lib/influxdb
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  agent:
+    image: swarmpit/agent:latest
+    environment:
+      # L'agent collecte les événements de chaque nœud et les pousse à l'app
+      DOCKER_API_VERSION: "1.40"
+      SWARMPIT_HOST: http://app:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - net
+    deploy:
+      # Mode global : un agent par nœud du cluster
+      mode: global
+
+networks:
+  net:
+    driver: overlay
+
+volumes:
+  db-data:
+  influx-data:

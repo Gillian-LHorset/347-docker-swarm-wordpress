@@ -128,3 +128,21 @@ docker service logs wp_stack_db
 - `wp_stack_db` : 1/1 sur le manager
 - `wp_stack_wordpress` : 2/2, une réplique par worker
 - `wp_stack_nginx` : 2/2, une réplique par worker
+
+## 8. Supervision avec Swarmpit
+
+Le cahier des charges impose Swarmpit pour visualiser nœuds, services, volumes et stacks du cluster. Swarmpit s'installe lui-même sous forme de stack Swarm, depuis le manager.
+
+Prérequis mémoire : le manager héberge MariaDB et les composants Swarmpit (JVM, CouchDB, InfluxDB). Prévoir 2 Go de RAM sur le manager et 1 Go par worker pour éviter les timeouts Swarm.
+
+Voir fichier `(swarmpit)docker-compose.yml`
+
+Déploiement et contrôle :
+
+```bash
+cd /root/swarmpit
+docker stack deploy -c docker-compose.yml swarmpit
+docker stack services swarmpit
+```
+
+État attendu : `app`, `db` et `influxdb` à 1/1, `agent` à 3/3 (un par nœud). L'interface est ensuite accessible depuis le navigateur de la machine hôte à l'adresse `http://10.228.242.240:8888`. Un compte administrateur est créé à la première connexion.
