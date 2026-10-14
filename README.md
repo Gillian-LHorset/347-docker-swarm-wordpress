@@ -146,3 +146,34 @@ docker stack services swarmpit
 ```
 
 État attendu : `app`, `db` et `influxdb` à 1/1, `agent` à 3/3 (un par nœud). L'interface est ensuite accessible depuis le navigateur de la machine hôte à l'adresse `http://10.228.242.240:8888`. Un compte administrateur est créé à la première connexion.
+
+## 9. Accès depuis la machine Windows
+
+Le nom de domaine `www.my-wordpress.ch` n'existe pas publiquement : il faut une résolution locale vers l'IP du manager.
+
+Avec droits administrateur, éditer `C:\Windows\System32\drivers\etc\hosts` et ajouter :
+
+```text
+10.228.242.240 www.my-wordpress.ch
+```
+
+Sans droits administrateur (PC ETML), deux alternatives :
+
+- Accès direct par IP : `http://10.228.242.240/`
+- Lancer Chrome avec une règle de résolution locale, sans modification du système :
+
+```powershell
+Start-Process "chrome.exe" -ArgumentList '--user-data-dir="$env:TEMP\wp-chrome" --host-resolver-rules="MAP www.my-wordpress.ch 10.228.242.240" http://www.my-wordpress.ch'
+```
+
+## 10. Test de fonctionnement
+
+Vérifier que le routing mesh et Nginx répondent :
+
+```bash
+curl -I http://www.my-wordpress.ch/
+```
+
+Réponse attendue : HTTP `302 Found` avec redirection vers `/wp-admin/install.php`, ce qui lance l'installation guidée de WordPress. Après création du compte administrateur, le tableau de bord est disponible sur `http://www.my-wordpress.ch/wp-admin/`.
+
+Test de tolérance aux pannes : arrêter l'une des VM workers pendant que le site est consulté. Swarm relance les tâches concernées sur le nœud restant et le service reste disponible, ce qui valide l'objectif de haute disponibilité.
