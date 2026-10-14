@@ -48,3 +48,21 @@ docker network create --driver overlay backend
 ```
 
 La base de données n'étant attachée qu'à `backend`, elle reste inaccessible depuis `frontend`, donc depuis le monde extérieur.
+
+## 4. Secrets Docker
+
+Les identifiants de MariaDB sont stockés dans les secrets Swarm plutôt qu'en variables d'environnement en clair. Chaque secret est injecté dans les conteneurs concernés sous `/run/secrets/` :
+
+```bash
+# Mot de passe root de MariaDB
+echo "mdp_root" | docker secret create db_root_password -
+
+# Mot de passe de l'utilisateur WordPress
+echo "mdp_user" | docker secret create db_password -
+```
+
+Lister les secrets créés :
+
+```bash
+docker secret ls
+```
