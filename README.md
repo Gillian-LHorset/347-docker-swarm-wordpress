@@ -95,3 +95,36 @@ Sans cette copie, la tâche Nginx reste bloquée en erreur `mounting` lors du d�
 Fichier `/root/wordpress-swarm/docker-compose.yml`, chaque instruction documentée. MariaDB est placée sur le manager, WordPress et Nginx sur les workers :
 
 Voir fichier `docker-compose.yml`
+
+## 7. Déploiement et vérification
+
+Depuis le manager, dans le dossier du projet :
+
+```bash
+cd /root/wordpress-swarm
+docker stack deploy -c docker-compose.yml wp_stack
+```
+
+Trois contrôles successifs valident le déploiement. État global des services :
+
+```bash
+docker stack services wp_stack
+```
+
+Répartition des tâches sur les nœuds :
+
+```bash
+docker stack ps wp_stack
+```
+
+Détail des conteneurs de la base, si nécessaire :
+
+```bash
+docker service logs wp_stack_db
+```
+
+État attendu :
+
+- `wp_stack_db` : 1/1 sur le manager
+- `wp_stack_wordpress` : 2/2, une réplique par worker
+- `wp_stack_nginx` : 2/2, une réplique par worker

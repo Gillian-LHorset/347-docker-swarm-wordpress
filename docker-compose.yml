@@ -1,0 +1,118 @@
+# Syntaxe Compose compatible avec les stacks Docker Swarm
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # Base de données MariaDB (image officielle v12.0.1)
+  # ==========================================================================
+  db:
+    image: mariadb:12.0.1
+
+    environment:
+      # Le mot de passe root est lu dans le secret monté sous /run/secrets/
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      # Base créée automatiquement au premier démarrage
+      MYSQL_DATABASE: wordpress
+      # Utilisateur dédié à WordPress, sans privilèges root
+      MYSQL_USER: wp_user
+      # Son mot de passe, également lu depuis un secret
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+
+    # Secrets Swarm injectés dans le conteneur au démarrage
+    secrets:
+      - db_root_password
+      - db_password
+
+    # Volume nommé : les données survivent aux redémarrages du conteneur
+    volumes:
+      - db_data:/var/lib/mysql
+
+    # Réseau interne uniquement : invisible depuis frontend
+    networks:
+      - backend
+
+    deploy:
+      # MariaDB n'est pas multi-actif : une seule instance
+      replicas: 1
+      placement:
+        # Exécution réservée au nœud manager
+        constraints:
+          - node.role == manager
+
+  # ==========================================================================
+  # WordPress en PHP-FPM (image officielle v6.8.2, variante alpine)
+  # ==========================================================================
+  wordpress:
+    image: wordpress:6.8.2-fpm-alpine
+
+    environment:
+      # Cible MariaDB via le nom DNS du service sur le réseau backend
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wp_user
+      # Mot de passe lu depuis le secret Swarm
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+
+    secrets:
+      - db_password
+
+    # Volume partagé : code et médias de WordPress, monté aussi par Nginx
+    volumes:
+      - wp_data:/var/www/html
+
+    # Pont entre les deux réseaux : accessible par Nginx, joignable vers db
+    networks:
+      - frontend
+      - backend
+
+    deploy:
+      # Deux répliques pour l'équilibrage de charge et la tolérance aux pannes
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+
+  # ==========================================================================
+  # Nginx, reverse proxy (image officielle v1.28.0, base alpine 3.21)
+  # ==========================================================================
+  nginx:
+    image: nginx:1.28.0-alpine3.21
+
+    ports:
+      # Publication du port 80 via le routing mesh : tout nœud route vers Nginx
+      - "80:80"
+
+    volumes:
+      # Configuration du reverse proxy, en lecture seule
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Fichiers statiques servis directement depuis le volume WordPress
+      - wp_data:/var/www/html:ro
+
+    networks:
+      - frontend
+
+    deploy:
+      # Une réplique par worker : la charge HTTP est répartie
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+
+# Volumes gérés par Swarm, persistants entre les déploiements
+volumes:
+  db_data:
+  wp_data:
+
+# Réseaux overlay créés à l'étape 3 : externes à la stack
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true
+
+# Secrets créés à l'étape 4 : externes à la stack
+secrets:
+  db_root_password:
+    external: true
+  db_password:
+    external: true
