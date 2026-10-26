@@ -1,12 +1,16 @@
-docker swarm init
+# Déploiement WordPress sur Docker Swarm
 
-echo "rootPass$123!" | docker secret create root_pwd -
-echo "wpPass$123!" | docker secret create wp_pwd -
+## 1. Préparation des trois VM
 
-Créez nginx.conf :
+Sur chaque VM (Alpine Linux), mise à jour du système puis installation du daemon Docker :
 
-docker-compose.yml :
+```bash
+apk update && apk upgrade
+apk add docker
+```
 
-docker run -it --rm --name swarmpit-installer --volume /var/run/docker.sock:/var/run/docker.sock swarmpit/install:1.9
+Démarrage du service Docker :
 
-docker stack deploy -c docker-compose.yml wordpress_stack
+```bash
+rc-service docker start
+```
