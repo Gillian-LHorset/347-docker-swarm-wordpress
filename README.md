@@ -153,8 +153,8 @@ Le nom de domaine `www.my-wordpress.ch` n'existe pas publiquement : il faut une 
 
 Avec droits administrateur, éditer `C:\Windows\System32\drivers\etc\hosts` et ajouter :
 
-```text
-10.228.242.240 www.my-wordpress.ch
+```ps1
+Add-Content -Path "$env:SystemRoot\System32\drivers\etc\hosts" -Value "`n10.228.242.240 www.my-wordpress.ch"
 ```
 
 Sans droits administrateur (PC ETML), deux alternatives :
