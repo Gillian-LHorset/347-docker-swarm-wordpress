@@ -177,3 +177,20 @@ curl -I http://www.my-wordpress.ch/
 Réponse attendue : HTTP `302 Found` avec redirection vers `/wp-admin/install.php`, ce qui lance l'installation guidée de WordPress. Après création du compte administrateur, le tableau de bord est disponible sur `http://www.my-wordpress.ch/wp-admin/`.
 
 Test de tolérance aux pannes : arrêter l'une des VM workers pendant que le site est consulté. Swarm relance les tâches concernées sur le nœud restant et le service reste disponible, ce qui valide l'objectif de haute disponibilité.
+
+## Relancement après fermeture
+
+Sur les workers, puis le manager :  
+`docker swarm leave`
+
+Sur le manager :  
+`docker swarm leave --force`
+
+Puis vérifier l'IP actuelle du manager et relancer l'initialisation :
+
+````bash
+ip addr   # noter l'IP réelle du manager
+docker swarm init --advertise-addr <IP_MANAGER>
+docker swarm join --token <TOKEN_WORKER> <IP_MANAGER>:2377   # sur chaque worker
+docker node ls```
+````
